@@ -19,7 +19,7 @@ def listen_announce(mc_addr, mc_port):
         if m := re.match(r'\[MOTD\](.*)\[/MOTD\]\[AD\](.*)\[/AD\]', data.decode('ASCII')):
             motd, port = m.groups()
         else:
-            continue
+            raise Exception(f"Unable to parse {data.decode('ASCII')!r}")
         yield {'server': source, 'port': port, 'motd': motd}
 
 for event in listen_announce('224.0.2.60', 4445):
