@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+# multicast to 224.0.2.60:4445
+# --> [MOTD]BlauweActie - world_2_1.18b[/MOTD][AD]42497[/AD]
+# --> {'server': ..., 'port': ..., 'motd': ...}
+
+import socket
+import re
+import json
+
+def listen_announce(mc_addr, mc_port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('0.0.0.0', mc_port))
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(mc_addr) + socket.inet_aton('0.0.0.0'))
+    s.settimeout(None)
+
+    while True:
+        (data, (source, _)) = s.recvfrom(1024)
+        if m := re.match(r'\[MOTD\](.*)\[/MOTD\]\[AD\](.*)\[/AD\]', data.decode('ASCII')):
+            motd, port = m.groups()
+        else:
+            continue
+        yield {'server': source, 'port': port, 'motd': motd}
+
+for event in listen_announce('224.0.2.60', 4445):
+    print(json.dumps(event), flush=True)
