@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 # multicast to 224.0.2.60:4445
 # --> [MOTD]BlauweActie - world_2_1.18b[/MOTD][AD]42497[/AD]
 # --> {'server': ..., 'port': ..., 'motd': ...}
@@ -6,6 +7,10 @@
 import socket
 import re
 import json
+import time
+import queue
+import threading
+import sys
 
 def listen_announce(mc_addr, mc_port):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -22,5 +27,40 @@ def listen_announce(mc_addr, mc_port):
             raise Exception(f"Unable to parse {data.decode('ASCII')!r}")
         yield {'server': source, 'port': port, 'motd': motd}
 
-for event in listen_announce('224.0.2.60', 4445):
-    print(json.dumps(event), flush=True)
+def announce_new(output, seen, announces):
+    for ann in announces:
+        key = (ann['server'], ann['port'])
+        if key in seen:
+            seen[key]['last'] = time.time()
+        else:
+            seen[key] = {'last': time.time(), **ann}
+            output.put({'op': 'add', **seen[key]})
+
+def scan_gone(output, seen, timeout):
+    while True:
+        time.sleep(10)
+        now = time.time()
+        gone = [k for k in seen if now - seen[k]['last'] >= timeout]
+        for k in gone:
+            output.put({'op': 'del', **seen.pop(k)})
+
+def output_events(output):
+    while True:
+        event = output.get(block=True)
+        print(json.dumps(event), flush=True)
+
+def run_threads():
+    Q = queue.Queue()
+    S = {}
+    A = listen_announce('224.0.2.60', 4445)
+
+    threading.Thread(target=announce_new,  args=[Q, S, A],  daemon=True).start()
+    threading.Thread(target=scan_gone,     args=[Q, S, 10], daemon=True).start()
+    threading.Thread(target=output_events, args=[Q],        daemon=True).start()
+
+    while threading.active_count() == 4:
+        time.sleep(1)
+
+    sys.exit(1)
+
+run_threads()
