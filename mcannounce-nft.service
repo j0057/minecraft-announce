@@ -1,0 +1,7 @@
+[Service]
+Type=simple
+ExecStart=/usr/bin/mcannounce-nft inet filter mcport
+SyslogIdentifier=%N
+
+[Install]
+WantedBy=multi-user.target
