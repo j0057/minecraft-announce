@@ -45,9 +45,10 @@ def scan_gone(output, seen, timeout):
             output.put({'op': 'del', **seen.pop(k)})
 
 def output_events(output):
+    sep = '' if sys.stdout.isatty() else '\x1e'
     while True:
         event = output.get(block=True)
-        print(json.dumps(event), flush=True)
+        print(sep + json.dumps(event), flush=True)
 
 def run_threads():
     Q = queue.Queue()

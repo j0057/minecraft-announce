@@ -5,7 +5,6 @@ TABLE=${TABLE:-${2:?missing table}}
 SETNAME=${SETNAME:-${3:?missing setname}}
 
 mcannounce \
-    | sed --unbuffered 's/^/\x1e/' \
     | jq --unbuffered --seq --raw-output '"\(.op) \(.server) \(.port)"' \
     | while read op server port; do \
         if ! ip -j -4 addr show | jq --exit-status '[.[].addr_info[].local] | any(. == $ip)' --arg ip $server >/dev/null; then
